@@ -53,6 +53,11 @@ class JObj:
     translate: np.array
     mtx: np.array
 
+    # linked pointers
+    p_next: int
+    p_parent: int
+    p_child: int
+
     @classmethod
     def from_mem(cls, mem: DOLMemory, p_jobj):
         flags = JObj_Flags(mem.readv(p_jobj + 0x14, "I"))
@@ -61,8 +66,20 @@ class JObj:
         translate = mem.readnp32(p_jobj + 0x38, (3,))  # Vec3
         mtx = mem.readnp32(p_jobj + 0x44, (3, 4))  # Mtx
 
+        p_next   = mem.readv(p_jobj + 0x08, "I")
+        p_parent = mem.readv(p_jobj + 0x0c, "I")
+        p_child  = mem.readv(p_jobj + 0x10, "I")
+
         return cls(
-            flags=flags, rotate=rotate, scale=scale, translate=translate, mtx=mtx
+            flags=flags,
+            rotate=rotate,
+            scale=scale,
+            translate=translate,
+            mtx=mtx,
+
+            p_next=p_next,
+            p_parent=p_parent,
+            p_child=p_child
         )
 
 
