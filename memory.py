@@ -1,9 +1,13 @@
 from logging import getLogger
+import struct
 import ctypes
 from ctypes import windll, WinError
 from ctypes import Structure, Union, sizeof, pointer
 from ctypes import c_char, c_ulong, c_long, c_size_t, c_void_p
 from ctypes.wintypes import DWORD, WORD, LPCVOID
+
+import numpy as np
+
 from win32ty import *
 
 logger = getLogger(__name__)
@@ -115,6 +119,41 @@ class DOLMemory:
             raise RuntimeError(f"asked for {size} bytes, only read {read_bytes}")
             # raise RuntimeError(f'read from {addr:x} (process addr {vaddr:x}) failed')
 
-        logger.debug(f'read {read_bytes.value}bytes from {addr:08x}')
+        logger.debug(f"read {read_bytes.value}bytes from {addr:08x}")
 
         return ctypes.string_at(buf, size=size)
+
+    def readv(self, ptr: int, fmt: str, size: int = None):
+        """
+        read a value with given struct 'fmt'. implicitly big endian.
+
+        if fmt only contains one value, it's unwrapped from the tuple.
+        otherwise, we convert it to a list before returning
+        (in case u wanna use np.array() or sth <3)
+
+        note that `size` is only provided as a convenience if
+        struct.calcsize is busted for some reason ??
+        """
+        st = struct.Struct(
+            ">" + fmt
+        )  # cached internally by struct (see the Note in struct.Struct)
+        size = size or st.size
+
+        buf = self.read(ptr, size)
+        vals = st.unpack(buf)
+
+        # implicit nonsense :3
+        if len(vals) == 1:
+            return vals[0]
+        else:
+            return list(vals)
+
+    def readnp32(self, ptr: int, shape: tuple[int]):
+        """
+        read a packed fp32 array of a given shape into an np.ndarray.
+        assumes contiguity/no intra-array padding
+        """
+
+        nw = int(np.prod(shape))
+        vals = struct.unpack(f">{nw}f", self.read(ptr, 4 * nw))
+        return np.array(vals).reshape(shape)
