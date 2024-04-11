@@ -56,8 +56,8 @@ class JObj:
     def from_mem(cls, p_jobj):
         flags = JObj_Flags(mem.readv(p_jobj + 0x14, 'I'))
         rotate = mem.readnp32(p_jobj + 0x1c, (4,)) # Quaternion
-        scale = mem.readnp32(p_jobj + 0x38, (3,)) # Vec3
-        translate = mem.readnp32(p_jobj + 0x1c, (3,)) # Vec3
+        scale = mem.readnp32(p_jobj + 0x2c, (3,)) # Vec3
+        translate = mem.readnp32(p_jobj + 0x38, (3,)) # Vec3
         mtx = mem.readnp32(p_jobj + 0x44, (3,4)) # Mtx
 
         return cls(flags=flags,
@@ -86,5 +86,10 @@ def walk_jobj(p_jobj, depth=0):
         dump_jobj(p_next, depth=depth)
 
 # dump_jobj(parts[0].p_joint)
+for i, bone in enumerate(parts):
+    print(f' --- {i:02} --- ')
+    jobj = JObj.from_mem(bone.p_joint)
+    print(f'{bone.p_joint:08x} {jobj.translate=} {jobj.rotate=}')
+
 
 IPython.embed()
