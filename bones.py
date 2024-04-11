@@ -7,16 +7,16 @@ import numpy as np
 
 from memory import DOLMemory
 from util import hexdump
-from melee import FighterKind, FighterBone, JObj_Flags
+from melee import FighterKind, FighterBone, JObj_Flags, JObj
+from melee import P_PLAYER_SLOTS, PLAYER_SLOT_SIZE
 
 # logging.basicConfig(level=logging.DEBUG)
 np.set_printoptions(linewidth=120)
 
 mem = DOLMemory()
 
-player_slots = 0x80453080
 slot = 0
-p_StaticPlayer = player_slots + 0xE90 * slot
+p_StaticPlayer = P_PLAYER_SLOTS + PLAYER_SLOT_SIZE * slot
 
 p_p_Fighter_GObj = p_StaticPlayer + 0xB0
 p_Fighter_GObj = mem.readv(p_p_Fighter_GObj, "I")
@@ -47,28 +47,6 @@ parts = [
     for idx in range(parts_num)
 ]
 
-
-@dataclass
-class JObj:
-    flags: int
-    rotate: np.array
-    scale: np.array
-    translate: np.array
-    mtx: np.array
-
-    @classmethod
-    def from_mem(cls, p_jobj):
-        flags = JObj_Flags(mem.readv(p_jobj + 0x14, "I"))
-        rotate = mem.readnp32(p_jobj + 0x1C, (4,))  # Quaternion
-        scale = mem.readnp32(p_jobj + 0x2C, (3,))  # Vec3
-        translate = mem.readnp32(p_jobj + 0x38, (3,))  # Vec3
-        mtx = mem.readnp32(p_jobj + 0x44, (3, 4))  # Mtx
-
-        return cls(
-            flags=flags, rotate=rotate, scale=scale, translate=translate, mtx=mtx
-        )
-
-
 # def dump_jobj(p_jobj, depth=0):
 #     idt = '  ' * depth
 #     print(idt + f'{p_jobj:x}')
@@ -93,8 +71,8 @@ def walk_jobj(p_jobj, depth=0):
 # dump_jobj(parts[0].p_joint)
 for i, bone in enumerate(parts):
     print(f" --- {i:02} --- ")
-    jobj = JObj.from_mem(bone.p_joint)
+    jobj = JObj.from_mem(mem, bone.p_joint)
     print(f"{bone.p_joint:08x} {jobj.translate=} {jobj.rotate=}")
 
 
-IPython.embed()
+# IPython.embed()

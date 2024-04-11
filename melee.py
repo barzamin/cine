@@ -2,25 +2,16 @@ import struct
 from enum import IntEnum, Flag, IntFlag, auto
 from dataclasses import dataclass
 
-### addresses ###
+import numpy as np
+
+from memory import DOLMemory
+
+### addresses/constants ###
+P_PLAYER_SLOTS = 0x80453080
+PLAYER_SLOT_SIZE = 0xE90
 
 
-### structs ###
-@dataclass
-class FighterBone:
-    p_joint: int
-    p_jobj2: int
-    flags: int
-
-    @classmethod
-    def from_bytes(cls, buf):
-        # ignore padding junk
-        p_joint, p_jobj2, flags = struct.unpack(">IIBxxxxxxx", buf)
-
-        return cls(p_joint, p_jobj2, flags)
-
-
-###
+####
 class JObj_Flags(Flag):
     SKELETON = 1 << 0
     SKELETON_ROOT = 1 << 1
@@ -52,6 +43,44 @@ class JObj_Flags(Flag):
     ROOT_OPA = 1 << 28
     ROOT_XLU = 1 << 29
     ROOT_TEXEDGE = 1 << 30
+
+
+@dataclass
+class JObj:
+    flags: JObj_Flags
+    rotate: np.array
+    scale: np.array
+    translate: np.array
+    mtx: np.array
+
+    @classmethod
+    def from_mem(cls, mem: DOLMemory, p_jobj):
+        flags = JObj_Flags(mem.readv(p_jobj + 0x14, "I"))
+        rotate = mem.readnp32(p_jobj + 0x1C, (4,))  # Quaternion
+        scale = mem.readnp32(p_jobj + 0x2C, (3,))  # Vec3
+        translate = mem.readnp32(p_jobj + 0x38, (3,))  # Vec3
+        mtx = mem.readnp32(p_jobj + 0x44, (3, 4))  # Mtx
+
+        return cls(
+            flags=flags, rotate=rotate, scale=scale, translate=translate, mtx=mtx
+        )
+
+
+@dataclass
+class FighterBone:
+    p_joint: int
+    p_jobj2: int
+    flags: int
+
+    @classmethod
+    def from_bytes(cls, buf):
+        # ignore padding junk
+        p_joint, p_jobj2, flags = struct.unpack(">IIBxxxxxxx", buf)
+
+        return cls(p_joint, p_jobj2, flags)
+
+
+###
 
 
 class FighterKind(IntEnum):
