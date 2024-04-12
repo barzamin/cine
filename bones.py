@@ -56,16 +56,16 @@ parts = [
 #     print(idt + f' |- {translate=}')
 
 
-def walk_jobj(p_jobj, depth=0):
-    dump_jobj(p_jobj, depth=depth)
+# def walk_jobj(p_jobj, depth=0):
+#     dump_jobj(p_jobj, depth=depth)
 
-    p_child = mem.readv(p_jobj + 0x10, "I")
-    if p_child != 0:
-        dump_jobj(p_child, depth=depth + 1)
+#     p_child = mem.readv(p_jobj + 0x10, "I")
+#     if p_child != 0:
+#         dump_jobj(p_child, depth=depth + 1)
 
-    p_next = mem.readv(p_jobj + 0x08, "I")
-    if p_next != 0:
-        dump_jobj(p_next, depth=depth)
+#     p_next = mem.readv(p_jobj + 0x08, "I")
+#     if p_next != 0:
+#         dump_jobj(p_next, depth=depth)
 
 
 # dump_jobj(parts[0].p_joint)
