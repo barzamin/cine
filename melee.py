@@ -48,10 +48,10 @@ class JObj_Flags(Flag):
 @dataclass
 class JObj:
     flags: JObj_Flags
-    rotate: np.array
-    scale: np.array
-    translate: np.array
-    mtx: np.array
+    rotate: np.ndarray
+    scale: np.ndarray
+    translate: np.ndarray
+    mtx: np.ndarray
 
     # linked pointers
     p_next: int
@@ -60,9 +60,7 @@ class JObj:
 
     @classmethod
     def from_mem(cls, mem: DOLMemory, p_jobj):
-        flags = mem.readv(p_jobj + 0x14, "I")
-        print(f'flags: {flags:08x}')
-        flags = JObj_Flags(flags)
+        flags = JObj_Flags(mem.readv(p_jobj + 0x14, "I"))
         rotate = mem.readnp32(p_jobj + 0x1C, (4,))  # Quaternion
         scale = mem.readnp32(p_jobj + 0x2C, (3,))  # Vec3
         translate = mem.readnp32(p_jobj + 0x38, (3,))  # Vec3

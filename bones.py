@@ -1,5 +1,6 @@
 import struct
 import logging
+from pprint import pprint
 from dataclasses import dataclass
 
 import IPython
@@ -72,10 +73,11 @@ parts = [
 for i, bone in enumerate(parts):
     print(f" --- {i:02} --- ")
     jobj = JObj.from_mem(mem, bone.p_joint)
-    print(f"""{bone.p_joint:08x}
-    {jobj.translate=}
-    {jobj.rotate=}
-    {jobj.flags=}""")
+    # print(f"""{bone.p_joint:08x}
+    # {jobj.translate=}
+    # {jobj.rotate=}
+    # {jobj.flags=}""")
+    pprint(jobj)
 
 
 # IPython.embed()
