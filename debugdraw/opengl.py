@@ -112,7 +112,7 @@ void main() {
         GL.glUniformMatrix4fv(
             self._line_program_uniform_locations['u_mvp_matrix'],
             1, # count
-            GL.GL_FALSE, # transpose
+            GL.GL_TRUE, # transpose
             self.mvp_matrix
         )
 

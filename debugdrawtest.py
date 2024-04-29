@@ -37,20 +37,58 @@ def rotate_around_z(theta):
         [0.,             0.,            0., 1.],
     ])
 
+def ortho_proj_matrix(left: float, right: float,
+    bottom: float, top: float,
+    near: float, far
+) -> np.ndarray:
+    inv_w = 1/(right - left)
+    inv_h = 1/(top - bottom)
+    inv_d = 1/(far - near)
+
+    return np.array([
+        [2*inv_w, 0,       0,        -(right+left)*inv_w],
+        [0,       2*inv_h, 0,        -(top+bottom)*inv_h],
+        [0,       0,       -2*inv_d, -(far+near)*inv_d  ],
+        [0,       0,       0,        1                  ],
+    ])
+
+
+def translate(x, y, z) -> np.ndarray:
+    return np.array([
+        [1, 0, 0, x],
+        [0, 1, 0, y],
+        [0, 0, 1, z],
+        [0, 0, 0, 1],
+    ])
+
 class OrbitCamera:
-    def __init__(self):
+    def __init__(self, fb_width: float, fb_height: float):
+        self.fb_width = fb_width
+        self.fb_height = fb_height
         self.rot_x = 0
         self.rot_y = 0
 
     @property
     def view_matrix(self) -> np.ndarray:
-        rotation = rotate_around_x(self.rot_x) @ rotate_around_y(self.rot_y)
+        return translate(0, 0, -5.) @ rotate_around_x(self.rot_x) @ rotate_around_y(self.rot_y)
 
-        return rotation
+    @property
+    def proj_matrix(self) -> np.ndarray:
+        aspect_ratio = self.fb_height/self.fb_width
+        zoom = 2
+        return ortho_proj_matrix(
+            -zoom*0.5, zoom*0.5,
+            -zoom*0.5*aspect_ratio, zoom*0.5*aspect_ratio,
+            0.1, 100.
+        )
+
+    @property
+    def vp_matrix(self) -> np.ndarray:
+        return self.proj_matrix @ self.view_matrix
 
 class App:
     def __init__(self):
-        self.camera = OrbitCamera()
+        self.camera = OrbitCamera(800, 800)
 
     def setup(self):
         GL.glEnable(GL.GL_DEPTH_TEST)
@@ -61,15 +99,18 @@ class App:
     def draw(self):
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
 
-        self.debugdraw.line(np.array([0.6, 0.6, 0.0]), np.array([-0.6, 0.6, 0.0]), np.array([1.0, 0.0, 0.0]))
-        # self.debugdraw.cross(np.array([0,0,0]),1)
-        self.debugdraw.arrow(np.array([0,-0.5,0]),
-            np.array([0,0.5,0]),
-            color=np.array([1,0,1]),
-            head_size=0.3)
+        # self.debugdraw.line(np.array([0.6, 0.6, 0.0]), np.array([-0.6, 0.6, 0.0]), np.array([1.0, 0.0, 0.0]))
+        self.debugdraw.cross(np.array([0,0,0]),0.2)
+        self.debugdraw.cross(np.array([0,0,-1]),0.5)
+
+        # self.debugdraw.arrow(np.array([0,0.,0]),
+        #     np.array([0,0.0,-5]),
+        #     color=np.array([1,0,1]),
+        #     head_size=0.3)
 
 
-        self.debugdraw.backend.mvp_matrix = self.camera.view_matrix
+        self.debugdraw.backend.mvp_matrix = self.camera.vp_matrix
+        print(self.camera.proj_matrix)
         self.debugdraw.flush()
 
     def handle_event(self, event):
@@ -79,8 +120,13 @@ class App:
                 CAM_SPEED = 0.1 * (np.pi/180.)
                 cursor_delta_x, cursor_delta_y = event.rel
 
-                self.camera.rot_y += cursor_delta_x * CAM_SPEED
-                self.camera.rot_x += cursor_delta_y * CAM_SPEED
+                self.camera.rot_y -= cursor_delta_x * CAM_SPEED
+                self.camera.rot_x -= cursor_delta_y * CAM_SPEED
+
+        if event.type == pygame.MOUSEWHEEL:
+            # print(event)
+            ...
+
 
 if __name__ == '__main__':
     pygame.init()
