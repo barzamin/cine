@@ -7,7 +7,7 @@ import click
 import numpy as np
 
 from memory import DOLMemory
-from util import hexdump
+from petrautil.hexdump import hexdump
 from melee import FighterKind, FighterBone, JObj_Flags, JObj
 from melee import P_PLAYER_SLOTS, PLAYER_SLOT_SIZE
 

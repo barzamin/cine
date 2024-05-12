@@ -7,46 +7,17 @@ import IPython
 import numpy as np
 
 from memory import DOLMemory
-from util import hexdump
-from melee import FighterKind, FighterBone, JObj_Flags, JObj
-from melee import P_PLAYER_SLOTS, PLAYER_SLOT_SIZE
+from melee import FighterKind, FighterBone, JObj_Flags, JObj, Melee
+from petrautil.hexdump import hexdump
 
 # logging.basicConfig(level=logging.DEBUG)
 np.set_printoptions(linewidth=120)
 
 mem = DOLMemory()
+melee = Melee(mem)
 
-slot = 0
-p_StaticPlayer = P_PLAYER_SLOTS + PLAYER_SLOT_SIZE * slot
-
-p_p_Fighter_GObj = p_StaticPlayer + 0xB0
-p_Fighter_GObj = mem.readv(p_p_Fighter_GObj, "I")
-p_Fighter = mem.readv(p_Fighter_GObj + 0x2C, "I")
-
-
-## figure out how many parts there are in the bone table
-fighter_kind = mem.readv(p_Fighter + 0x4, "I")
-# FighterPartsTable** ftPartsTable
-# comes from PlCo.dat
-# indexed by fighter_kind
-ftPartsTable = mem.readv(0x804D6544, "I")
-# typedef struct _FighterPartsTable {
-#     u8* joint_to_part;
-#     u8* part_to_joint;
-#     u32 parts_num;
-# } FighterPartsTable;
-fighter_ftParts = mem.readv(ftPartsTable + fighter_kind * 4, "I")
-parts_num = mem.readv(fighter_ftParts + 0x8, "I")
-
-## bone table
-# FighterBone[]
-# sizeof(FighterBone) == 0x10
-p_bone_table = mem.readv(p_Fighter + 0x5E8, "I")
-
-parts = [
-    FighterBone.from_bytes(mem.read(p_bone_table + idx * 0x10, 0x10))
-    for idx in range(parts_num)
-]
+fighter = melee.get_fighter(slot=0)
+parts = fighter.get_fighterbones()
 
 # def dump_jobj(p_jobj, depth=0):
 #     idt = '  ' * depth

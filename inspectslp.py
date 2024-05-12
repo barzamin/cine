@@ -11,7 +11,7 @@ import warnings
 import click
 import IPython
 
-from util import hexdump
+from petrautil.hexdump import hexdump
 from melee import FighterKind
 
 logger = getLogger(__name__)

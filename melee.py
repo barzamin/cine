@@ -192,3 +192,68 @@ class Fighter_Part(IntEnum):
     FtPart_ThrowN = auto()
     FtPart_TransN2 = auto()
     FtPart_109 = 109
+
+
+### abstraction ###
+
+pointer = int
+
+
+class Fighter:
+    def __init__(self, mem: DOLMemory, p_Fighter: pointer):
+        self.mem = mem
+        self.ptr = p_Fighter
+
+    @property
+    def kind(self) -> FighterKind:
+        return FighterKind(self.mem.readv(self.ptr + 0x4, "I"))
+
+    def parts_count(self) -> int:
+        ftPartsTable = self.mem.readv(0x804D6544, "I")
+
+        # FighterPartsTable** ftPartsTable
+        # comes from PlCo.dat
+        # indexed by fighter_kind
+        # typedef struct _FighterPartsTable {
+        #     u8* joint_to_part;
+        #     u8* part_to_joint;
+        #     u32 parts_num;
+        # } FighterPartsTable;
+
+        fighter_ftParts = self.mem.readv(ftPartsTable + self.kind * 4, "I")
+        parts_num = self.mem.readv(fighter_ftParts + 0x8, "I")
+
+        return parts_num
+
+
+    def get_fighterbones(self) -> list[FighterBone]:
+        parts_num = self.parts_count()
+
+        ## bone table
+        # FighterBone[]
+        # sizeof(FighterBone) == 0x10
+        p_bone_table = self.mem.readv(self.ptr + 0x5E8, "I")
+
+        parts = [
+            FighterBone.from_bytes(self.mem.read(p_bone_table + idx * 0x10, 0x10))
+            for idx in range(parts_num)
+        ]
+
+        return parts
+
+class Melee:
+    def __init__(self, mem: DOLMemory):
+        self.mem = mem
+
+    def _get_p_Fighter(self, slot: int) -> pointer:
+        slot = 0
+        p_StaticPlayer = P_PLAYER_SLOTS + PLAYER_SLOT_SIZE * slot
+
+        p_p_Fighter_GObj = p_StaticPlayer + 0xB0
+        p_Fighter_GObj = self.mem.readv(p_p_Fighter_GObj, "I")
+        p_Fighter = self.mem.readv(p_Fighter_GObj + 0x2C, "I")
+
+        return p_Fighter
+
+    def get_fighter(self, slot: int) -> Fighter:
+        return Fighter(self.mem, self._get_p_Fighter(slot))
