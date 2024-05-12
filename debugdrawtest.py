@@ -71,6 +71,7 @@ class OrbitCamera:
     @property
     def view_matrix(self) -> np.ndarray:
         return translate(0, 0, -5.) @ rotate_around_x(self.rot_x) @ rotate_around_y(self.rot_y)
+        # return translate(0, 0, -5)
 
     @property
     def proj_matrix(self) -> np.ndarray:
@@ -89,6 +90,9 @@ class OrbitCamera:
 class App:
     def __init__(self):
         self.camera = OrbitCamera(800, 800)
+        self.camera.rot_x = np.pi/7
+        self.camera.rot_y = np.pi/9
+        # self.camera.rot_y = np.pi/4
 
     def setup(self):
         GL.glEnable(GL.GL_DEPTH_TEST)
@@ -99,18 +103,14 @@ class App:
     def draw(self):
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
 
-        # self.debugdraw.line(np.array([0.6, 0.6, 0.0]), np.array([-0.6, 0.6, 0.0]), np.array([1.0, 0.0, 0.0]))
+        self.debugdraw.line(np.array([0.6, 0.6, 0.0]), np.array([-0.6, 0.6, 0.0]), np.array([1.0, 0.0, 0.0]))
         self.debugdraw.cross(np.array([0,0,0]),0.2)
         self.debugdraw.cross(np.array([0,0,-1]),0.5)
 
-        # self.debugdraw.arrow(np.array([0,0.,0]),
-        #     np.array([0,0.0,-5]),
-        #     color=np.array([1,0,1]),
-        #     head_size=0.3)
-
+        self.debugdraw.axes(np.identity(4), axis_length=1, head_size=0.3)
 
         self.debugdraw.backend.mvp_matrix = self.camera.vp_matrix
-        print(self.camera.proj_matrix)
+
         self.debugdraw.flush()
 
     def handle_event(self, event):

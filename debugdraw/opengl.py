@@ -30,6 +30,7 @@ in vec4 v_color;
 layout(location = 0) out vec4 o_diffuse;
 
 void main() {
+    //float fogamt = max(1., gl_FragCoord.z)
     o_diffuse = v_color;
 }
 '''
@@ -115,6 +116,8 @@ void main() {
             GL.GL_TRUE, # transpose
             self.mvp_matrix
         )
+
+        GL.glEnable(GL.GL_DEPTH_TEST)
 
         # upload data
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self._line_vbuf)

@@ -151,6 +151,31 @@ class DebugDrawCtx:
             self.line(v0, end, color)
             self.line(v0, v1, color)
 
+    def axes(self, transform: np.ndarray, axis_length: float, head_size: float):
+        origin = np.array([0,0,0,1])
+        x_end = np.array([axis_length,0,0,1])
+        y_end = np.array([0,axis_length,0,1])
+        z_end = np.array([0,0,axis_length,1])
+
+        origin = transform @ origin
+        x_end = transform @ x_end
+        y_end = transform @ y_end
+        z_end = transform @ z_end
+
+        self.arrow(origin[:3],
+            x_end[:3],
+            color=np.array([1,0,0]),
+            head_size=head_size)
+        self.arrow(origin[:3],
+            y_end[:3],
+            color=np.array([0,1,0]),
+            head_size=head_size)
+        self.arrow(origin[:3],
+            z_end[:3],
+            color=np.array([0,0,1]),
+            head_size=head_size)
+
+
     ### mechanisms
 
     def flush(self):
