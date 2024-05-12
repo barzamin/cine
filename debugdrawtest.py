@@ -5,7 +5,6 @@ from OpenGL import GL
 from OpenGL.GL import shaders
 import pygame
 import numpy as np
-import scipy.spatial.transform as txf
 
 from debugdraw import DebugDrawCtx, GLDebugDrawBackend
 

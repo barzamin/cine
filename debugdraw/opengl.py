@@ -48,6 +48,7 @@ void main() {
         self._line_program = shaders.compileProgram(
             shaders.compileShader(self.SHADER_VERT, GL.GL_VERTEX_SHADER),
             shaders.compileShader(self.SHADER_FRAG, GL.GL_FRAGMENT_SHADER),
+            validate=False, #HACK
         )
 
         line_program_uniforms = ['u_mvp_matrix']
