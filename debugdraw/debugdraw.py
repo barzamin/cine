@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from ctypes import Structure, c_float, sizeof
+from ctypes import c_float, sizeof
+import ctypes
 from logging import getLogger
 
 import numpy as np
@@ -15,6 +16,12 @@ class DebugLine:
     pos1: np.ndarray
     col1: np.ndarray
 
+@dataclass
+class DebugPoint:
+    pos: np.ndarray
+    col: np.ndarray
+    size: float
+
 class RenderBackend(ABC):
     @abstractmethod
     def begin_draw(self): ...
@@ -24,16 +31,6 @@ class RenderBackend(ABC):
 
     @abstractmethod
     def draw_lines(self): ...
-
-class VertexRecord(Structure):
-    _fields_ = [
-        ('x', c_float),
-        ('y', c_float),
-        ('z', c_float),
-        ('r', c_float),
-        ('g', c_float),
-        ('b', c_float),
-    ]
 
 def _make_orthonormal_basis(forward: np.ndarray) -> (np.ndarray, np.ndarray):
     # via glampert
@@ -78,15 +75,60 @@ def _make_orthonormal_basis(forward: np.ndarray) -> (np.ndarray, np.ndarray):
 
     return (up, right)
 
+class LineVertexRecord(ctypes.Structure):
+    _fields_ = [
+        ('x', c_float),
+        ('y', c_float),
+        ('z', c_float),
+        ('r', c_float),
+        ('g', c_float),
+        ('b', c_float),
+    ]
+
+class PointVertexRecord(ctypes.Structure):
+    _fields_ = [
+        ('x', c_float),
+        ('y', c_float),
+        ('z', c_float),
+        ('r', c_float),
+        ('g', c_float),
+        ('b', c_float),
+        ('size', c_float),
+    ]
+
+class VertexRecord(ctypes.Union):
+    _fields_ = [
+        ('line', LineVertexRecord),
+        ('point', PointVertexRecord),
+    ]
+
+class VertexBuffer[T: ctypes.Structure|ctypes.Union]:
+    def __init__(self, fmt: type[T], max_size: int):
+        self.buffer = (fmt * max_size)()
+        self.size = max_size
+        self.used = 0
+
+    def __len__(self) -> int:
+        return len(self.size)
+
+    def clear(self):
+        self.used = 0
+
+    def next(self) -> T:
+        v = self.buffer[self.used]
+        self.used += 1
+
+        return v
+
 VERTEX_BUFFER_SIZE = 4096
 class DebugDrawCtx:
     def __init__(self, backend: RenderBackend):
         self.backend = backend
 
         self.line_queue = []
+        self.point_queue = []
 
-        self.vertex_buffer = (VertexRecord * VERTEX_BUFFER_SIZE)()
-        self.vertices_used = 0
+        self.vertexbuf = VertexBuffer(fmt=VertexRecord, max_size=VERTEX_BUFFER_SIZE)
 
     ###
 
@@ -103,6 +145,20 @@ class DebugDrawCtx:
         )
 
         self.line_queue.append(line)
+
+    def point(
+        self,
+        pos: np.ndarray,
+        color: np.ndarray,
+        size: float,
+    ):
+        point = DebugPoint(
+            pos=pos,
+            col=color,
+            size=size,
+        )
+
+        self.point_queue.append(point)
 
     ### sugar
     def cross(self, pos: np.ndarray, length: float):
@@ -180,36 +236,57 @@ class DebugDrawCtx:
 
     def flush(self):
         self._draw_lines()
+        self._draw_points()
 
         # flush draw queues
         self.line_queue.clear()
+        self.point_queue.clear()
 
     def _draw_lines(self):
         for line in self.line_queue:
             self._line2vertbuf(line)
 
         # logger.debug(f'calling backend.draw_lines(..., {self.vertices_used})')
-        self.backend.draw_lines(self.vertex_buffer, self.vertices_used)
-        self.vertices_used = 0
+        self.backend.draw_lines(self.vertexbuf)
+        self.vertexbuf.clear()
+
+    def _draw_points(self):
+        for point in self.point_queue:
+            self._point2vertbuf(point)
+
+        self.backend.draw_points(self.vertexbuf)
+        self.vertexbuf.clear()
+
 
     def _line2vertbuf(self, line: DebugLine):
         # TODO: force a draw if we've filled the vertex buffer
-        assert (self.vertices_used + 2) < len(self.vertex_buffer)
+        assert (self.vertexbuf.used + 2) < self.vertexbuf.size
 
-        v0 = self.vertex_buffer[self.vertices_used]
-        self.vertices_used += 1
-        v0.x = line.pos0[0]
-        v0.y = line.pos0[1]
-        v0.z = line.pos0[2]
-        v0.r = line.col0[0]
-        v0.g = line.col0[1]
-        v0.b = line.col0[2]
+        v0 = self.vertexbuf.next()
+        v0.line.x = line.pos0[0]
+        v0.line.y = line.pos0[1]
+        v0.line.z = line.pos0[2]
+        v0.line.r = line.col0[0]
+        v0.line.g = line.col0[1]
+        v0.line.b = line.col0[2]
 
-        v1 = self.vertex_buffer[self.vertices_used]
-        self.vertices_used += 1
-        v1.x = line.pos1[0]
-        v1.y = line.pos1[1]
-        v1.z = line.pos1[2]
-        v1.r = line.col1[0]
-        v1.g = line.col1[1]
-        v1.b = line.col1[2]
+        v1 = self.vertexbuf.next()
+        v1.line.x = line.pos1[0]
+        v1.line.y = line.pos1[1]
+        v1.line.z = line.pos1[2]
+        v1.line.r = line.col1[0]
+        v1.line.g = line.col1[1]
+        v1.line.b = line.col1[2]
+
+    def _point2vertbuf(self, point: DebugPoint):
+        # TODO: force a draw if we've filled the vertex buffer
+        assert (self.vertexbuf.used + 1) < self.vertexbuf.size
+
+        v0 = self.vertexbuf.next()
+        v0.point.x = point.pos[0]
+        v0.point.y = point.pos[1]
+        v0.point.z = point.pos[2]
+        v0.point.r = point.col[0]
+        v0.point.g = point.col[1]
+        v0.point.b = point.col[2]
+        v0.point.size = point.size
